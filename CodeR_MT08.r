@@ -139,3 +139,75 @@ gpu_cleaned_df$Process <- as.numeric(gsub("[^0-9.]", "", gpu_cleaned_df$Process)
 
 ## Save the cleaned data frame to CSV
 write.csv(gpu_cleaned_df, cleaned_file_path, row.names = FALSE)
+
+## Define the numeric columns for boxplot visualization
+selected_columns <- c(
+  "Core_Speed", "Memory", "Pixel_Rate", 
+  "Memory_Bandwidth", "Memory_Bus", "Memory_Speed", "Process"
+)
+
+## Set up the layout to plot multiple boxplots in one window
+par(mfrow = c(2, 4))  # 2 rows and 4 columns of plots
+
+## Function to find and print outliers from boxplot
+find_boxplot_outliers <- function(data, column_name) {
+  col_data <- data[[column_name]]
+  outliers <- boxplot.stats(col_data)$out  
+  
+  if (length(outliers) > 0) {
+    outlier_counts <- table(outliers)  
+    cat("Outliers in", column_name, ":\n")
+    print(outlier_counts)
+  } else {
+    cat("No outliers in", column_name, "\n")
+  }
+}
+
+## Loop through each selected column to draw boxplot and identify outliers
+for (col in selected_columns) {
+  boxplot(gpu_cleaned_df[[col]], 
+          main = paste("Boxplot of", col), 
+          ylab = col, 
+          col = "skyblue", 
+          border = "black")
+  find_boxplot_outliers(gpu_cleaned_df, col)
+}
+
+## Reset layout to default (1 plot at a time)
+par(mfrow = c(1, 1))
+
+## Remove outlier row where Memory_Bus == 3072
+gpu_cleaned_df <- gpu_cleaned_df %>% filter(Memory_Bus != 3072)
+
+# 4. Plotting visualization
+## Draw histogram for Core_Speed
+hist(gpu_cleaned_df$Core_Speed,
+     main = "Histogram of Core_Speed",
+     xlab = "Core Speed (MHz)",
+     col = "lightblue",
+     border = "black")
+
+## Boxplot showing Core_Speed by Manufacturer (rotated for readability)
+boxplot(Core_Speed ~ Manufacturer,
+        data = gpu_cleaned_df,
+        main = "Core_Speed by Manufacturer",
+        ylab = "Manufacturer",
+        xlab = "Core Speed (MHz)",
+        col = "lightgreen",
+        border = "black",
+        horizontal = TRUE)
+
+## Define variables for scatter plots
+variables <- c("Memory", "Pixel_Rate", "Memory_Bandwidth", "Memory_Bus", "Memory_Speed", "Process")
+
+## Set up layout for 6 scatter plots (3 rows, 2 columns)
+par(mfrow = c(3, 2))
+
+## Loop through variables and plot scatter plot against Core_Speed
+for (i in seq_along(variables)) {
+  var <- variables[i]
+  formula <- as.formula(paste("Core_Speed ~", var))
+  plot(formula, data = gpu_cleaned_df, type = "p", col = i, pch = 16,
+       main = paste("Correlation between Core Speed and", gsub("_", " ", var)),
+       cex.main = 1)
+}
