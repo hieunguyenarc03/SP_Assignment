@@ -140,70 +140,74 @@ gpu_cleaned_df$Process <- as.numeric(gsub("[^0-9.]", "", gpu_cleaned_df$Process)
 ## Save the cleaned data frame to CSV
 write.csv(gpu_cleaned_df, cleaned_file_path, row.names = FALSE)
 
-# Define the numeric columns for boxplot visualization
+## Define the numeric columns for boxplot visualization
 selected_columns <- c(
   "Core_Speed", "Memory", "Pixel_Rate", 
   "Memory_Bandwidth", "Memory_Bus", "Memory_Speed", "Process"
 )
 
 ## Set up the layout to plot multiple boxplots in one window
-par(mfrow = c(2, 4)) # Arrange in 2 rows, 4 columns (adjust as needed)
+par(mfrow = c(2, 4))  # 2 rows and 4 columns of plots
 
 ## Function to find and print outliers from boxplot
 find_boxplot_outliers <- function(data, column_name) {
-  box_stats <- boxplot.stats(data[[column_name]])$out
-  if (length(box_stats) > 0) {
-    cat("Outliers in", column_name, ":", box_stats, "\n")
+  col_data <- data[[column_name]]
+  outliers <- boxplot.stats(col_data)$out  
+  
+  if (length(outliers) > 0) {
+    outlier_counts <- table(outliers)  
+    cat("Outliers in", column_name, ":\n")
+    print(outlier_counts)
   } else {
     cat("No outliers in", column_name, "\n")
   }
-  return(box_stats)
 }
 
-## Plot boxplots and identify outliers for each column
+## Loop through each selected column to draw boxplot and identify outliers
 for (col in selected_columns) {
-### Plot boxplot
   boxplot(gpu_cleaned_df[[col]], 
           main = paste("Boxplot of", col), 
           ylab = col, 
           col = "skyblue", 
           border = "black")
-  
-### Print outliers
   find_boxplot_outliers(gpu_cleaned_df, col)
 }
 
-## Reset to default layout
+## Reset layout to default (1 plot at a time)
 par(mfrow = c(1, 1))
 
-## Check rows with Core_Speed from 100–400 MHz
-low_core_speed <- gpu_cleaned_df[gpu_cleaned_df$Core_Speed %in% c(100, 200, 300, 350, 400), ]
+## Remove outlier row where Memory_Bus == 3072
+gpu_cleaned_df <- gpu_cleaned_df %>% filter(Memory_Bus != 3072)
 
-## Print the number of rows and detailed information
-cat("Number of rows with Core_Speed from 100–400 MHz:", nrow(low_core_speed), "\n")
-print("Details of rows with low Core_Speed:")
-print(low_core_speed)
+# 4. Plotting visualization
+## Draw histogram for Core_Speed
+hist(gpu_cleaned_df$Core_Speed,
+     main = "Histogram of Core_Speed",
+     xlab = "Core Speed (MHz)",
+     col = "lightblue",
+     border = "black")
 
-## Check the manufacturer of these GPUs
-cat("Distribution by Manufacturer:\n")
-table(low_core_speed$Manufacturer)
+## Boxplot showing Core_Speed by Manufacturer (rotated for readability)
+boxplot(Core_Speed ~ Manufacturer,
+        data = gpu_cleaned_df,
+        main = "Core_Speed by Manufacturer",
+        ylab = "Manufacturer",
+        xlab = "Core Speed (MHz)",
+        col = "lightgreen",
+        border = "black",
+        horizontal = TRUE)
 
-## Summarize other columns for evaluation
-cat("Summary of other columns for GPUs with low Core_Speed:\n")
-summary(low_core_speed)
+## Define variables for scatter plots
+variables <- c("Memory", "Pixel_Rate", "Memory_Bandwidth", "Memory_Bus", "Memory_Speed", "Process")
 
-## Check rows with Memory_Bus = 3072, 4096, 8192 bit
-suspicious_bus <- gpu_cleaned_df[gpu_cleaned_df$Memory_Bus %in% c(3072, 4096, 8192), ]
+## Set up layout for 6 scatter plots (3 rows, 2 columns)
+par(mfrow = c(3, 2))
 
-## Print the number of rows and detailed information
-cat("Number of rows with Memory_Bus = 3072, 4096, 8192 bit:", nrow(suspicious_bus), "\n")
-print("Details of rows with unusual Memory_Bus:")
-print(suspicious_bus)
-
-## Check the manufacturer
-cat("Distribution by Manufacturer:\n")
-table(suspicious_bus$Manufacturer)
-
-## Check Memory_Bandwidth for these rows
-cat("Summary of Memory_Bandwidth for GPUs with unusual Memory_Bus:\n")
-summary(suspicious_bus$Memory_Bandwidth)
+## Loop through variables and plot scatter plot against Core_Speed
+for (i in seq_along(variables)) {
+  var <- variables[i]
+  formula <- as.formula(paste("Core_Speed ~", var))
+  plot(formula, data = gpu_cleaned_df, type = "p", col = i, pch = 16,
+       main = paste("Correlation between Core Speed and", gsub("_", " ", var)),
+       cex.main = 1)
+}
