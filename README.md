@@ -171,11 +171,11 @@ for (col in selected_columns) {
 ```
 ![Boxplot của các biến trong tập dữ liệu](img/boxplot_outlier.png)
 
-*Hình 6: Boxplot của các biến trong tập dữ liệu*
+*Hình 7: Boxplot của các biến trong tập dữ liệu*
 
 ![Outlier của từng biến](img/outlier.png)
 
-*Hình 7: Outlier của từng biến*
+*Hình 8: Outlier của từng biến*
 
 **Nhận xét:** Qua phân tích boxplot, đa số giá trị ngoại lai (outlier) đều nằm trong giới hạn hợp lý của thông số GPU: các mức Core_Speed rất thấp (< 500 MHz) thuộc GPU tích hợp hoặc cũ, và các mức rất cao (> 1 300 MHz) phản ánh GPU rời high-end; Memory từ 9 GB đến 32 GB, Memory_Bandwidth lên đến hơn 1 000 GB/s nhờ HBM3, Pixel_Rate trong khoảng 80–260 GPixel/s, và Process từ 65–150 nm đều là những thông số thực tế. Chỉ có Memory_Bus = 3072 bit là bất hợp lý, vì không tồn tại chuẩn bus 3 072 bit trên GPU thương mại; do đó giá trị này sẽ được loại bỏ để đảm bảo tính chính xác và nhất quán cho các phân tích sau.
 
@@ -215,7 +215,7 @@ summary_table
 ```
 ![Kết quả thống kê mẫu dạng bảng](img/summary.png)
 
-*Hình 8: Kết quả thống kê mẫu dạng bảng*
+*Hình 9: Kết quả thống kê mẫu dạng bảng*
 
 #### Bước 2: Histogram của Core_Speed.  
 
@@ -228,7 +228,7 @@ hist(gpu_cleaned_df$Core_Speed,
 ```
 ![Biểu đồ Histogram của biến Core_speed](img/his_core.png)
 
-*Hình 9: Biểu đồ Histogram của biến Core_speed*
+*Hình 10: Biểu đồ Histogram của biến Core_speed*
 
 **Nhận xét:**
 * **Hình dạng chung:** Biểu đồ chỉ ra một đỉnh phân phối duy nhất nằm quanh khoảng 900–1100 MHz, cho thấy phần lớn GPU có core clock tập trung trong vùng này.
@@ -250,18 +250,81 @@ boxplot(Core_Speed ~ Manufacturer,
         border = "black"
 )
 ```
-![Biểu đồ Histogram của biến Core_speed](img/his_core.png)
+![Biểu đồ Boxplot mối quan hệ giữa Core_speed và Manufacture](img/boxplot_core_vs_mf.png)
 
-*Hình 9: Biểu đồ Histogram của biến Core_speed*
+*Hình 11: Biểu đồ Boxplot mối quan hệ giữa Core_speed và Manufacture*
 
 **Nhận xét:**
-* **Hình dạng chung:** Biểu đồ chỉ ra một đỉnh phân phối duy nhất nằm quanh khoảng 900–1100 MHz, cho thấy phần lớn GPU có core clock tập trung trong vùng này.
-* **Tính đối xứng và độ lệch:** 
-  * Đỉnh cao nhất rơi vào khoảng 950–1000 MHz, sát với trung vị (~980 MHz).
-  * Histogram hơi lệch trái: có một số giá trị rất thấp (100–300 MHz) kéo trung bình xuống dưới trung vị.
-  * Đuôi phải kéo dài tới hơn 1 700 MHz, đại diện cho các GPU high-end với xung rất cao nhưng tần suất rất thấp.
-  * Tuy nhiên, sự lệch không quá lớn, phân phối vẫn tương đối cân bằng quanh trung tâm.
-* **So sánh với phân phối chuẩn:** Về tổng thể, phân phối Core_Speed có hình dạng tương tự đường cong Gaussian, nhưng lại lệch trái. Mặc dù phần lớn dữ liệu tập trung quanh trung tâm (như phân phối chuẩn), vẫn có nhiều giá trị “xa trung tâm” hơn một chút.
 
-#### Bước 2: Boxplot mối quan hệ giữa Core_speed và Manufacture.  
+* **Intel**
 
+   * Phân bố rất rộng: **Q1 ≈ 300 MHz**, **Q3 ≈ 1 000 MHz**, cho thấy bao gồm cả GPU tích hợp/xu hướng cũ (core thấp) và một số GPU rời entry-level.
+   * **Median ≈ 850 MHz**, thấp hơn so với các hãng khác.
+   * Rất nhiều outlier thấp (< 500 MHz) phản ánh tập con GPU tích hợp.
+
+* **AMD**
+
+   * IQR hẹp hơn Intel: **Q1 ≈ 850 MHz**, **Q3 ≈ 1 000 MHz**.
+   * **Median ≈ 975 MHz**, cao hơn Intel nhưng thấp hơn Nvidia.
+   * Một số outlier dưới \~600 MHz, có thể là AMD tích hợp hoặc card low-end.
+
+* **Nvidia**
+
+   * Phân bố tập trung ở mức cao hơn: **Q1 ≈ 900 MHz**, **Q3 ≈ 1 100 MHz**.
+   * **Median ≈ 1 000 MHz**, cao nhất hoặc ngang bằng AMD.
+   * Nhiều outlier phía trên \~1 400–1 700 MHz, thể hiện các GPU high-end như RTX/GTX.
+
+* **ATI**
+
+   * Số mẫu nhỏ, nhưng phân bố khá đồng đều và cao: **IQR ≈ 950–1 100 MHz**, **median ≈ 1 025 MHz**.
+   * Gần như không có outlier, cho thấy dữ liệu ATI trong tập hơi đồng nhất (chủ yếu GPU rời cùng thế hệ).
+
+#### Bước 3: Scatter plot giữa Core_Speed và các biến phụ  
+```r
+variables <- c("Memory", "Pixel_Rate", "Memory_Bandwidth", "Memory_Bus", "Memory_Speed", "Process")
+
+par(mfrow = c(3, 2))
+
+for (i in seq_along(variables)) {
+  var <- variables[i]
+  formula <- as.formula(paste("Core_Speed ~", var))
+  plot(formula, data = gpu_cleaned_df, type = "p", col = i, pch = 16,
+       main = paste("Correlation between Core Speed and", gsub("_", " ", var)),
+       cex.main = 1)
+}
+```
+![Scatter plots mối quan hệ giữa Core_Speed và các biến phụ](img/scatter_plot.png)
+
+*Hình 12: Biểu đồ Scatter plots mối quan hệ giữa Core_Speed và các biến phụ*
+
+**Nhận xét:**
+* **Core_Speed vs Memory**
+  * Không có mối quan hệ tuyến tính rõ ràng.
+  * Các giá trị `Memory` rất phân tán (từ 0 đến 32000 MB), nhưng hầu hết tập trung dưới 8000 MB.
+  * Core\_Speed không tăng theo Memory → **tương quan rất yếu**.
+  * Dữ liệu dày đặc ở bên trái, thưa dần về bên phải.
+
+* **Core_Speed vs Pixel_Rate**
+  * Có **mối quan hệ tuyến tính dương rõ rệt**.
+  * Pixel_Rate càng cao thì Core_Speed càng cao.
+  * Đây là mối quan hệ mạnh nhất trong các scatter plots → **tương quan cao**.
+  * Phù hợp với logic hiệu suất: GPU có xung nhịp cao xử lý được nhiều pixel hơn mỗi giây.
+
+* **Core_Speed vs Memory_Bandwidth**
+  * Có xu hướng tăng nhẹ, nhưng phân tán nhiều.
+  * Phần lớn GPU nằm trong khoảng băng thông < 400 GB/s.
+  * **Mối quan hệ trung bình**, không mạnh như Pixel_Rate.
+
+* **Core_Speed vs Memory_Bus**
+  * Dữ liệu phân bố dày bên trái (128–512 bit), rải rác vài outlier rất lớn (8192 bit).
+  * Bus rộng không đi kèm xung nhịp cao → **tương quan rất yếu**.
+  * Không có xu hướng rõ ràng trong biểu đồ.
+
+* **Core_Speed vs Memory_Speed**
+  * Có **xu hướng tăng nhẹ**: GPU có bộ nhớ nhanh thường có xung nhịp cao hơn.
+  * Tuy nhiên dữ liệu vẫn phân tán và có nhiều giá trị trùng lặp → **tương quan yếu**.
+  * Một số GPU có cùng Memory_Speed nhưng khác biệt đáng kể về Core_Speed.
+
+* **Core_Speed vs Process**
+  * Có **mối quan hệ âm rõ ràng**: tiến trình nhỏ hơn (nm thấp hơn) → Core_Speed cao hơn.
+  * Mặc dù có nhiễu, nhưng **tương quan âm khá rõ** giữa hai biến.
