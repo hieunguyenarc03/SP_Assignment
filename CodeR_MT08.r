@@ -5,6 +5,10 @@ cleaned_file_path <- "./All_GPUs_cleaned.csv"
 # 1.Read data
 gpus_df <- read.csv(raw_file_path, stringsAsFactors = FALSE)
 
+head(gpus_df, 5)
+
+tail(gpus_df, 5)
+
 ## Format the data (Only 'gpu_formatted_df' is used for further processing)
 
 gpu_formatted_df <- gpus_df
@@ -35,16 +39,6 @@ str(gpu_formatted_df)
 summary(gpu_formatted_df)
 
 # 3.Data cleaning
-## Print number of missing values in each column
-missing_values <- colSums(is.na(gpu_formatted_df))
-missing_df <- data.frame(
-  Index = seq_along(missing_values),
-  Column = names(missing_values),
-  Missing_Count = as.vector(missing_values),
-  Missing_Percent = round(100 * missing_values / nrow(gpu_formatted_df), 2)
-)
-missing_df[missing_df$Missing_Count >= 0, ]
-
 ## Define selected column names
 selected_columns <- c(
   "Core_Speed", "Manufacturer", "Memory",
@@ -54,6 +48,25 @@ selected_columns <- c(
 
 ## Copy selected columns from gpu_formatted_df into a new dataframe
 gpu_cleaned_df <- gpu_formatted_df[, selected_columns]
+
+## Change to numeric
+numeric_columns <- setdiff(selected_columns, "Manufacturer")
+for (col in numeric_columns) {
+  gpu_cleaned_df[[col]] <- as.numeric(gsub("[^0-9.]", "", gpu_cleaned_df[[col]]))
+}
+
+## Change Manufacturer's type to factor
+gpu_cleaned_df$Manufacturer <- factor(gpu_cleaned_df$Manufacturer)
+
+## Print number of missing values in each column
+missing_values <- colSums(is.na(gpu_cleaned_df))
+missing_df <- data.frame(
+  Index = seq_along(missing_values),
+  Column = names(missing_values),
+  Missing_Count = as.vector(missing_values),
+  Missing_Percent = round(100 * missing_values / nrow(gpu_formatted_df), 2)
+)
+missing_df[missing_df$Missing_Count >= 0, ]
 
 ## Clean the data (Only 'gpu_cleaned_df' is used for further processing)
 
@@ -114,37 +127,21 @@ hist(
 median_pixel_rate <- median(gpu_cleaned_df$Pixel_Rate, na.rm = TRUE)
 gpu_cleaned_df$Pixel_Rate[is.na(gpu_cleaned_df$Pixel_Rate)] <- median_pixel_rate
 
+
+### Replace missing values in 'Process' with the median
+median_process <- median(gpu_cleaned_df$Process, na.rm = TRUE)
+gpu_cleaned_df$Process[is.na(gpu_cleaned_df$Process)] <- median_pixel_rate
+
 ## Remove rows with any remaining missing values
 gpu_cleaned_df <- gpu_cleaned_df[complete.cases(gpu_cleaned_df), ]
 
-## 'Manufacturer', 'Memory_Bandwidth', 'Memory_Bus', 'Memory_Speed', 'Process' processing
-### Convert all columns to character type
-gpu_cleaned_df$Manufacturer <- as.factor(gpu_cleaned_df$Manufacturer)
-
-units_memory_bandwidth <- gsub("^[0-9.]+\\s*", "", gpu_cleaned_df$Memory_Bandwidth)
-unique(units_memory_bandwidth)
-gpu_cleaned_df$Memory_Bandwidth <- as.numeric(gsub("[^0-9.]", "", gpu_cleaned_df$Memory_Bandwidth))
-
-units_memory_bus <- gsub("^[0-9.]+\\s*", "", gpu_cleaned_df$Memory_Bus)
-unique(units_memory_bus)
-gpu_cleaned_df$Memory_Bus <- as.numeric(gsub("[^0-9.]", "", gpu_cleaned_df$Memory_Bus))
-
-units_memory_speed <- gsub("^[0-9.]+\\s*", "", gpu_cleaned_df$Memory_Speed)
-unique(units_memory_speed)
-gpu_cleaned_df$Memory_Speed <- as.numeric(gsub("[^0-9.]", "", gpu_cleaned_df$Memory_Speed))
-
-units_process <- gsub("^[0-9.]+\\s*", "", gpu_cleaned_df$Process)
-unique(units_process)
-gpu_cleaned_df$Process <- as.numeric(gsub("[^0-9.]", "", gpu_cleaned_df$Process))
 
 ## Save the cleaned data frame to CSV
 write.csv(gpu_cleaned_df, cleaned_file_path, row.names = FALSE)
 
-## Define the numeric columns for boxplot visualization
-selected_columns <- c(
-  "Core_Speed", "Memory", "Pixel_Rate", 
-  "Memory_Bandwidth", "Memory_Bus", "Memory_Speed", "Process"
-)
+## check for na value
+sum(is.na(gpu_cleaned_df))
+
 
 ## Set up the layout to plot multiple boxplots in one window
 par(mfrow = c(2, 4))  # 2 rows and 4 columns of plots
@@ -177,9 +174,23 @@ for (col in selected_columns) {
 par(mfrow = c(1, 1))
 
 ## Remove outlier row where Memory_Bus == 3072
-gpu_cleaned_df <- gpu_cleaned_df %>% filter(Memory_Bus != 3072)
+gpu_cleaned_df <- gpu_cleaned_df[gpu_cleaned_df$Memory_Bus != 3072, ]
 
 # 4. Plotting visualization
+## Summary
+numeric_columns <- sapply(gpu_cleaned_df[, selected_columns], is.numeric)
+
+mean_vals <- apply(gpu_cleaned_df[, numeric_columns], 2, mean)
+med_vals  <- apply(gpu_cleaned_df[, numeric_columns], 2, median)
+sd_vals   <- apply(gpu_cleaned_df[, numeric_columns], 2, sd)
+Q1_vals   <- apply(gpu_cleaned_df[, numeric_columns], 2, quantile, probs = 0.25)
+Q3_vals   <- apply(gpu_cleaned_df[, numeric_columns], 2, quantile, probs = 0.75)
+min_vals  <- apply(gpu_cleaned_df[, numeric_columns], 2, min)
+max_vals  <- apply(gpu_cleaned_df[, numeric_columns], 2, max)
+
+summary_table <- data.frame(mean_vals, med_vals, sd_vals, Q1_vals, Q3_vals, min_vals, max_vals)
+summary_table
+
 ## Draw histogram for Core_Speed
 hist(gpu_cleaned_df$Core_Speed,
      main = "Histogram of Core_Speed",
@@ -191,11 +202,11 @@ hist(gpu_cleaned_df$Core_Speed,
 boxplot(Core_Speed ~ Manufacturer,
         data = gpu_cleaned_df,
         main = "Core_Speed by Manufacturer",
-        ylab = "Manufacturer",
-        xlab = "Core Speed (MHz)",
+        ylab = "Core Speed (MHz)",
+        xlab = "Manufacturer",
         col = "lightgreen",
-        border = "black",
-        horizontal = TRUE)
+        border = "black"
+)
 
 ## Define variables for scatter plots
 variables <- c("Memory", "Pixel_Rate", "Memory_Bandwidth", "Memory_Bus", "Memory_Speed", "Process")
