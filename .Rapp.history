@@ -1,0 +1,7 @@
+install.packages("languageserver")#
+install.packages("languageserver")
+install.packages("languageserver")
+chooseCRANmirror()
+install.packages("languageserver")
+setwd("/Users/tranquang/Documents/general subject/Probability and statistics/SP_Assignment-main")
+setwd("/Users/tranquang/Documents/general subject/Probability and statistics/SP_Assignment-main")

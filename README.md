@@ -2,6 +2,8 @@
 
 ## Set up Environment
 [Set up R in VS Code](https://youtu.be/x4b46DzclzY?si=az7ZaxD1WQD993lD)
+<<<<<<< HEAD
+=======
 
 
 ## 1. Tiền xử lý dữ liệu
@@ -328,3 +330,4 @@ for (i in seq_along(variables)) {
 * **Core_Speed vs Process**
   * Có **mối quan hệ âm rõ ràng**: tiến trình nhỏ hơn (nm thấp hơn) → Core_Speed cao hơn.
   * Mặc dù có nhiễu, nhưng **tương quan âm khá rõ** giữa hai biến.
+>>>>>>> 7a658e1e718b52dcdc60c0f8c0c77281b1441c97

@@ -222,3 +222,64 @@ for (i in seq_along(variables)) {
        main = paste("Correlation between Core Speed and", gsub("_", " ", var)),
        cex.main = 1)
 }
+# %% Test for normality
+shapiro.test(gpu_cleaned_df$Core_Speed)
+
+# %% Calculate 99% confidence interval for Core Speed
+x <- gpu_cleaned_df$Core_Speed
+
+E <- function(x) {
+  qnorm(p = 0.01/2, lower.tail = FALSE) * sd(x) / sqrt(length(x))
+}
+margin_error <- E(x)
+lower_ci <- mean(x) - margin_error
+upper_ci <- mean(x) + margin_error
+mean_core_speed <- mean(x)
+
+data.frame(
+  Lower_CI_99 = lower_ci,
+  Mean        = mean_core_speed,
+  Upper_CI_99 = upper_ci
+)
+
+# %% 5.2.1 - Tách hai mẫu Core_Speed theo Process: 14nm và 28nm
+group_14 <- gpu_cleaned_df$Core_Speed[gpu_cleaned_df$Process == 14]
+group_28 <- gpu_cleaned_df$Core_Speed[gpu_cleaned_df$Process == 28]
+
+# Kiểm tra số lượng mẫu
+length(group_14)
+length(group_28)
+
+# %% 5.2.2 - Kiểm định phân phối chuẩn với Shapiro-Wilk
+shapiro.test(group_14)
+shapiro.test(group_28)
+
+# %% 5.2.3 - Kiểm định trung bình hai mẫu với t.test
+test_result <- t.test(group_14, group_28)
+print(test_result)
+
+# %% RR khoảng bác bỏ
+alpha <- 0.05
+Za <- qnorm(p = alpha / 2, lower.tail = FALSE)
+
+RR <- data.frame(
+  Lower = -Za,
+  Upper = Za
+)
+
+print(RR)
+# %% 5.2.4 - Tính khoảng tin cậy hai phía
+ci_lower <- test_result$conf.int[1]
+ci_upper <- test_result$conf.int[2]
+mean_diff <- test_result$estimate[1] - test_result$estimate[2]
+
+data.frame(
+  Mean_Diff = mean_diff,
+  CI_Lower_95 = ci_lower,
+  CI_Upper_95 = ci_upper,
+  P_Value = test_result$p.value,
+  T_Value = test_result$statistic
+)
+
+
+
